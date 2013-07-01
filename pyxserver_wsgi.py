@@ -137,22 +137,32 @@ def do_POST(data):
     statsd.increment('xserver.post-requests')
     # This server expects jobs to be pushed to it from the queue
     xpackage = json.loads(data)
-    body  = xpackage['xqueue_body']
-    files = xpackage['xqueue_files']
+    if xpackage.get('myreq', None):
 
-    # Delivery from the lms
-    body = json.loads(body)
-    student_response = body['student_response']
-    payload = body['grader_payload']
-    try:
-        grader_config = json.loads(payload)
-    except ValueError as err:
-        # If parsing json fails, erroring is fine--something is wrong in the content.
-        # However, for debugging, still want to see what the problem is
-        statsd.increment('xserver.grader_payload_error')
+        body  = xpackage['xqueue_body']
+        files = xpackage['xqueue_files']
+        student_response = body['student_response']
+        payload = body['grader_payload']
+        grader_config = payload
 
-        log.debug("error parsing: '{0}' -- {1}".format(payload, err))
-        raise
+    else:
+
+        body  = xpackage['xqueue_body']
+        files = xpackage['xqueue_files']
+
+        # Delivery from the lms
+        body = json.loads(body)
+        student_response = body['student_response']
+        payload = body['grader_payload']
+        try:
+            grader_config = json.loads(payload)
+        except ValueError as err:
+            # If parsing json fails, erroring is fine--something is wrong in the content.
+            # However, for debugging, still want to see what the problem is
+            statsd.increment('xserver.grader_payload_error')
+
+            log.debug("error parsing: '{0}' -- {1}".format(payload, err))
+            raise
 
     log.debug("Processing submission, grader payload: {0}".format(payload))
     relative_grader_path = grader_config['grader']
